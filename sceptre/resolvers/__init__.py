@@ -67,6 +67,7 @@ class ResolvableProperty(object):
         :return: The attribute stored with the suffix ``name`` in the instance.
         :rtype: dict or list
         """
+
         def resolve(attr, key, value):
             attr[key] = value.resolve()
 
