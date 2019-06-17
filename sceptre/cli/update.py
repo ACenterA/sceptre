@@ -22,9 +22,14 @@ from sceptre.plan.plan import SceptrePlan
 @click.option(
     "-y", "--yes", is_flag=True, help="Assume yes to all questions."
 )
+
+@click.option(
+    "--wait", type=click.Choice(["yes", "no", "wait_only"]), default="yes",
+    help="Wait for status completion.")
+
 @click.pass_context
 @catch_exceptions
-def update_command(ctx, path, change_set, verbose, yes):
+def update_command(ctx, path, change_set, verbose, yes, wait):
     """
     Updates a stack for a given config PATH. Or perform an update via
     change-set when the change-set flag is set.
@@ -46,7 +51,8 @@ def update_command(ctx, path, change_set, verbose, yes):
         user_variables=ctx.obj.get("user_variables"),
         options=ctx.obj.get("options"),
         output_format=ctx.obj.get("output_format"),
-        ignore_dependencies=ctx.obj.get("ignore_dependencies")
+        ignore_dependencies=ctx.obj.get("ignore_dependencies"),
+        wait=wait
     )
 
     plan = SceptrePlan(context)
@@ -79,5 +85,5 @@ def update_command(ctx, path, change_set, verbose, yes):
             plan.delete_change_set(change_set_name)
     else:
         confirmation("update", yes, command_path=path)
-        responses = plan.update()
+        responses = plan.update(wait)
         exit(stack_status_exit_code(responses.values()))
