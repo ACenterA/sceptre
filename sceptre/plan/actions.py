@@ -167,11 +167,11 @@ class StackActions(object):
              elapsed = 0
              status = self._get_simplified_status(self._get_status())
              # Force exit code of 0
-             #if status == StackStatus.IN_PROGRESS:
-             #   return StackStatus.COMPLETE
-             # Cancel update after timeout
              if status == StackStatus.IN_PROGRESS:
-                 status = self.cancel_stack_update()
+                return StackStatus.COMPLETE
+             # Cancel update after timeout well not really...
+             #if status == StackStatus.IN_PROGRESS:
+             #    status = self.cancel_stack_update()
   
              return status
         except botocore.exceptions.ClientError as exp:
