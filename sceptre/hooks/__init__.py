@@ -100,10 +100,28 @@ def add_stack_hooks(func):
     """
     @wraps(func)
     def decorated(self, *args, **kwargs):
-        execute_hooks(self.stack.hooks.get("before_" + func.__name__))
-        response = func(self, *args, **kwargs)
-        execute_hooks(self.stack.hooks.get("after_" + func.__name__))
-
-        return response
+        if (len(args) == 0):
+           # Default Behavior 
+           execute_hooks(self.stack.hooks.get("before_" + func.__name__))
+           response = func(self, *args, **kwargs)
+           execute_hooks(self.stack.hooks.get("after_" + func.__name__))
+           return response
+        else:
+           if args[0] == 'yes':
+               # Default Behavior 
+               execute_hooks(self.stack.hooks.get("before_" + func.__name__))
+               response = func(self, *args, **kwargs)
+               execute_hooks(self.stack.hooks.get("after_" + func.__name__))
+               return response
+           elif args[0] == 'no':
+               # Ony run the pre hooks ... we expect another call using wait_only
+               execute_hooks(self.stack.hooks.get("before_" + func.__name__))
+               response = func(self, *args, **kwargs)
+               return response
+           elif args[0] == 'wait_only':
+               # Ony run the post hooks...
+               response = func(self, *args, **kwargs)
+               execute_hooks(self.stack.hooks.get("after_" + func.__name__))
+               return response
 
     return decorated

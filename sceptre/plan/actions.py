@@ -47,7 +47,7 @@ class StackActions(object):
         )
 
     @add_stack_hooks
-    def create(self):
+    def create(self, wait_action):
         """
         Creates a Stack.
 
@@ -75,17 +75,31 @@ class StackActions(object):
         create_stack_kwargs.update(self._get_stack_timeout())
 
         try:
-            response = self.connection_manager.call(
-                service="cloudformation",
-                command="create_stack",
-                kwargs=create_stack_kwargs
-            )
+            if not wait_action == 'wait_only':
+                response = self.connection_manager.call(
+                    service="cloudformation",
+                    command="create_stack",
+                    kwargs=create_stack_kwargs
+                )
+    
+                self.logger.debug(
+                    "%s - Create stack response: %s", self.stack.name, response
+                )
 
-            self.logger.debug(
-                "%s - Create stack response: %s", self.stack.name, response
-            )
+            if wait_action == 'yes' or wait_action == 'wait_only':
+                status = self._wait_for_completion()
+            else:
+               status = StackStatus.IN_PROGRESS
+               self.most_recent_event_datetime = (
+                  datetime.now(tzutc()) - timedelta(seconds=3)
+               )
+               elapsed = 0
+               status = self._get_simplified_status(self._get_status())
+               # Force exit code of 0
+               if status == StackStatus.IN_PROGRESS:
+                  return StackStatus.COMPLETE
 
-            status = self._wait_for_completion()
+               return status
         except botocore.exceptions.ClientError as exp:
             if exp.response["Error"]["Code"] == "AlreadyExistsException":
                 self.logger.info(
@@ -99,7 +113,7 @@ class StackActions(object):
         return status
 
     @add_stack_hooks
-    def update(self):
+    def update(self, wait_action):
         """
         Updates the Stack.
 
@@ -109,6 +123,8 @@ class StackActions(object):
         self._protect_execution()
         self.logger.info("%s - Updating Stack", self.stack.name)
         try:
+          if not wait_action == 'wait_only':
+            self.logger.info("%s - Updating Stack", self.stack.name)
             update_stack_kwargs = {
                 "StackName": self.stack.external_name,
                 "Parameters": self._format_parameters(self.stack.parameters),
@@ -131,16 +147,33 @@ class StackActions(object):
                 command="update_stack",
                 kwargs=update_stack_kwargs
             )
-            status = self._wait_for_completion(self.stack.stack_timeout)
+            # status = self._wait_for_completion(self.stack.stack_timeout)
             self.logger.debug(
                 "%s - Update Stack response: %s", self.stack.name, response
             )
 
+          if wait_action == 'yes' or wait_action == 'wait_only':
+            status = self._wait_for_completion(self.stack.stack_timeout)
             # Cancel update after timeout
             if status == StackStatus.IN_PROGRESS:
-                status = self.cancel_stack_update()
-
+              status = self.cancel_stack_update()
+  
             return status
+          else:
+             status = StackStatus.IN_PROGRESS
+             self.most_recent_event_datetime = (
+                datetime.now(tzutc()) - timedelta(seconds=3)
+             )
+             elapsed = 0
+             status = self._get_simplified_status(self._get_status())
+             # Force exit code of 0
+             #if status == StackStatus.IN_PROGRESS:
+             #   return StackStatus.COMPLETE
+             # Cancel update after timeout
+             if status == StackStatus.IN_PROGRESS:
+                 status = self.cancel_stack_update()
+  
+             return status
         except botocore.exceptions.ClientError as exp:
             error_message = exp.response["Error"]["Message"]
             if error_message == "No updates are to be performed.":
@@ -172,7 +205,7 @@ class StackActions(object):
         )
         return self._wait_for_completion()
 
-    def launch(self):
+    def launch(self, wait_action):
         """
         Launches the Stack.
 
@@ -195,13 +228,37 @@ class StackActions(object):
             "%s - Stack is in the %s state", self.stack.name, existing_status
         )
 
+        if existing_status.endswith("UPDATE_ROLLBACK_IN_PROGRESS"):
+            # wait until it finalize then lets proceed..
+            self.logger.info(
+                "%s - Stack is %s, waiting before launching stack action.", self.stack.name, existing_status
+            )
+            existing_status = self._wait_for_completion()
+            self.logger.info(
+                "%s - Stack is now in the following state: %s. Will proceed with command action.", self.stack.name
+            )
+            existing_status = "UPDATE_ROLLBACK_COMPLETE"
+
         if existing_status == "PENDING":
-            status = self.create()
+            status = self.create(wait_action)
         elif existing_status in ["CREATE_FAILED", "ROLLBACK_COMPLETE"]:
             self.delete()
+            status = self.create(wait_action)
+        elif existing_status.endswith("COMPLETE") or (existing_status.endswith("IN_PROGRESS") and wait_action == 'wait_only'):
+            try:
+                status = self.update(wait_action)
+            except botocore.exceptions.ClientError as exp:
+                error_message = exp.response["Error"]["Message"]
+                if error_message == "No updates are to be performed.":
+                    self.logger.info(
+                        "%s - No updates to perform.", self.stack.name
+                    )
+                    status = StackStatus.COMPLETE
+                else:
+                    raise
             status = self.create()
-        elif existing_status.endswith("COMPLETE"):
-            status = self.update()
+        #elif existing_status.endswith("COMPLETE"):
+        #    status = self.update()
         elif existing_status.endswith("IN_PROGRESS"):
             self.logger.info(
                 "%s - Stack action is already in progress state and cannot "

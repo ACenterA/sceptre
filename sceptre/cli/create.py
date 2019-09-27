@@ -12,9 +12,14 @@ from sceptre.cli.helpers import stack_status_exit_code
 @click.option(
     "-y", "--yes", is_flag=True, help="Assume yes to all questions."
 )
+
+@click.option(
+    "--wait", type=click.Choice(["yes", "no", "wait_only"]), default="yes",
+    help="Wait for status completion.")
+
 @click.pass_context
 @catch_exceptions
-def create_command(ctx, path, change_set_name, yes):
+def create_command(ctx, path, change_set_name, yes, wait):
     """
     Creates a stack for a given config PATH. Or if CHANGE_SET_NAME is specified
     creates a change set for stack in PATH.
@@ -32,7 +37,8 @@ def create_command(ctx, path, change_set_name, yes):
         project_path=ctx.obj.get("project_path"),
         user_variables=ctx.obj.get("user_variables"),
         options=ctx.obj.get("options"),
-        ignore_dependencies=ctx.obj.get("ignore_dependencies")
+        ignore_dependencies=ctx.obj.get("ignore_dependencies"),
+        wait=wait
     )
 
     action = "create"
@@ -44,5 +50,5 @@ def create_command(ctx, path, change_set_name, yes):
         plan.create_change_set(change_set_name)
     else:
         confirmation(action, yes, command_path=path)
-        responses = plan.create()
+        responses = plan.create(wait)
         exit(stack_status_exit_code(responses.values()))
