@@ -256,7 +256,7 @@ class StackActions(object):
                     status = StackStatus.COMPLETE
                 else:
                     raise
-            status = self.create()
+        #    status = self.create()
         #elif existing_status.endswith("COMPLETE"):
         #    status = self.update()
         elif existing_status.endswith("IN_PROGRESS"):
