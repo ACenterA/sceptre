@@ -237,6 +237,8 @@ class StackActions(object):
 
             try:
                 existing_status = self._get_status()
+                time.sleep(4)
+                existing_status = self._get_status()
             except StackDoesNotExistError:
               existing_status = "PENDING"
          
