@@ -234,11 +234,19 @@ class StackActions(object):
                 "%s - Stack is %s, waiting before launching stack action.", self.stack.name, existing_status
             )
             existing_status = self._wait_for_completion()
+
+            try:
+                existing_status = self._get_status()
+            except StackDoesNotExistError:
+              existing_status = "PENDING"
+         
             self.logger.info(
                 "%s - Stack is now in the following state: %s. Will proceed with command action.", self.stack.name, existing_status
             )
 
-            if existing_status.endswith("DELETE_IN_PROGRESS"):
+            if existing_status.endswith("ROLLBACK_COMPLETE"):
+              existing_status = "PENDING"
+            elif existing_status.endswith("DELETE_IN_PROGRESS"):
               # Force dlete / create
               existing_status = "PENDING"
             else:
