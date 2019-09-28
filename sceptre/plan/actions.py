@@ -235,7 +235,7 @@ class StackActions(object):
             )
             existing_status = self._wait_for_completion()
             self.logger.info(
-                "%s - Stack is now in the following state: %s. Will proceed with command action.", self.stack.name
+                "%s - Stack is now in the following state: %s. Will proceed with command action.", self.stack.name, existing_status
             )
 
             if existing_status.endswith("DELETE_IN_PROGRESS"):
