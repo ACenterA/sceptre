@@ -251,6 +251,8 @@ class StackActions(object):
             elif existing_status.endswith("DELETE_IN_PROGRESS"):
               # Force dlete / create
               existing_status = "PENDING"
+            elif existing_status.endswith("CREATE_IN_PROGRESS"):
+              existing_status = "IN_PROGRESS"
             else:
               existing_status = "UPDATE_ROLLBACK_COMPLETE"
 
