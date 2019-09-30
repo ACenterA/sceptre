@@ -228,7 +228,7 @@ class StackActions(object):
             "%s - Stack is in the %s state", self.stack.name, existing_status
         )
 
-        if existing_status.endswith("UPDATE_ROLLBACK_IN_PROGRESS") or existing_status.endswith("CLEANUP_IN_PROGRESS") or existing_status.endswith("DELETE_IN_PROGRESS") or existing_status.endswith("ROLLBACK_IN_PROGRESS"):
+        if existing_status.endswith("UPDATE_IN_PROGRESS") or existing_status.endswith("CREATE_IN_PROGRESS") or existing_status.endswith("UPDATE_ROLLBACK_IN_PROGRESS") or existing_status.endswith("CLEANUP_IN_PROGRESS") or existing_status.endswith("DELETE_IN_PROGRESS") or existing_status.endswith("ROLLBACK_IN_PROGRESS"):
             # wait until it finalize then lets proceed..
             self.logger.info(
                 "%s - Stack is %s, waiting before launching stack action.", self.stack.name, existing_status
@@ -252,7 +252,7 @@ class StackActions(object):
               # Force dlete / create
               existing_status = "PENDING"
             elif existing_status.endswith("CREATE_IN_PROGRESS"):
-              existing_status = "IN_PROGRESS"
+              existing_status = "CREATE_IN_PROGRESS"
             elif existing_status.endswith("UPDATE_IN_PROGRESS"):
               existing_status = "UPDATE_IN_PROGRESS"
             else:
